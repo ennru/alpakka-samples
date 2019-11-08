@@ -12,6 +12,10 @@ import akka.kafka._
 import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import com.lightbend.cinnamon.akka.stream.CinnamonAttributes
+import io.jaegertracing.Configuration
+import io.jaegertracing.Configuration.{SamplerConfiguration, SenderConfiguration}
+import io.jaegertracing.internal.samplers.ConstSampler
 import io.opentracing.Tracer
 import io.opentracing.contrib.kafka.{TracingKafkaConsumer, TracingKafkaProducer}
 import io.opentracing.util.GlobalTracer
@@ -19,13 +23,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization._
 import spray.json._
-import io.jaegertracing.Configuration
-import io.jaegertracing.Configuration.ReporterConfiguration
-import io.jaegertracing.Configuration.SamplerConfiguration
-import io.jaegertracing.internal.JaegerTracer
-import io.jaegertracing.internal.samplers.ConstSampler
-import io.opentracing.Span
-import io.opentracing.util.GlobalTracer
 
 import scala.collection.immutable
 import scala.concurrent.duration._
@@ -43,20 +40,10 @@ object Main extends App with Helper {
   val targetTopic = "movie-target"
   private val groupId = "docs-group"
 
-  import io.jaegertracing.Configuration.ReporterConfiguration
-  import io.jaegertracing.Configuration.SamplerConfiguration
-  import io.jaegertracing.internal.samplers.ConstSampler
 
-  import io.jaegertracing.Configuration.ReporterConfiguration
-  import io.jaegertracing.Configuration.SamplerConfiguration
-  import io.jaegertracing.Configuration.SenderConfiguration
-  import io.jaegertracing.internal.samplers.ConstSampler
-
-  val samplerConfig = new Configuration.SamplerConfiguration().withType(ConstSampler.TYPE).withParam(1)
-  val senderConfig = new Configuration.SenderConfiguration().withAgentHost("localhost").withAgentPort(5775)
+  val samplerConfig = SamplerConfiguration.fromEnv().withType(ConstSampler.TYPE).withParam(1)
+  val senderConfig = SenderConfiguration.fromEnv()//.withAgentHost("localhost").withAgentPort(5775)
   val reporterConfig = new Configuration.ReporterConfiguration().withLogSpans(true).withFlushInterval(1000).withMaxQueueSize(10000).withSender(senderConfig)
-//  tracer = new Nothing(componentName).withSampler(samplerConfig).withReporter(reporterConfig).getTracer
-
 
 //  val samplerConfig = SamplerConfiguration.fromEnv.withType(ConstSampler.TYPE).withParam(1)
 //  val reporterConfig = ReporterConfiguration.fromEnv.withLogSpans(true)
@@ -111,6 +98,8 @@ object Main extends App with Helper {
       }
       .toMat(Producer.committableSinkWithOffsetContext(kafkaProducerSettings, kafkaCommitterSettings))(Keep.both)
       .mapMaterializedValue(Consumer.DrainingControl.apply)
+      .named("kafka-to-kafka")
+      .addAttributes(CinnamonAttributes.instrumented(reportByName = true))
       .run()
     // #flow
     control
@@ -141,7 +130,7 @@ object Main extends App with Helper {
 
   // TODO why does this not complete?
 //    Await.result(received.shutdown(), 10.seconds)
-//  received.shutdown()
+  received.shutdown()
 
   stopContainers()
   actorSystem.terminate()
