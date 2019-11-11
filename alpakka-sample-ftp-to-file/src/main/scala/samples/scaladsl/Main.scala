@@ -8,7 +8,7 @@ import akka.actor.ActorSystem
 import akka.stream.alpakka.ftp.FtpSettings
 import akka.stream.alpakka.ftp.scaladsl.Ftp
 import akka.stream.scaladsl.{FileIO, Sink}
-import akka.stream.{ActorMaterializer, IOResult, Materializer}
+import akka.stream.IOResult
 // #imports
 import org.apache.mina.util.AvailablePortFinder
 import playground.FtpServerEmbedded
@@ -21,7 +21,6 @@ import scala.util.{Failure, Success}
 
 object Main extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val actorMaterializer: Materializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = actorSystem.dispatcher
 
   def wait(duration: FiniteDuration): Unit = Thread.sleep(duration.toMillis)
@@ -52,6 +51,7 @@ object Main extends App {
       .filter(ftpFile => ftpFile.isFile)                       //: FtpFile (2)
       .mapAsyncUnordered(parallelism = 5) { ftpFile =>         // (3)
         val localPath = targetDir.resolve("." + ftpFile.path)
+        localPath.getParent.toFile.mkdirs()
         val fetchFile: Future[IOResult] = Ftp
           .fromPath(ftpFile.path, ftpSettings)
           .runWith(FileIO.toPath(localPath))                   // (4)
@@ -73,7 +73,7 @@ object Main extends App {
         case Success(errors) =>
           println(s"errors occured: ${errors.mkString("\n")}")
         case Failure(exception) =>
-          println("the stream failed")
+          println(s"the stream failed: $exception")
       }
       actorSystem.terminate().onComplete { _ =>
         ftpServer.stop()

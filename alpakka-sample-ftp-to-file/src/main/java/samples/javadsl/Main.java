@@ -2,9 +2,7 @@ package samples.javadsl;
 
 import akka.actor.ActorSystem;
 import akka.japi.Pair;
-import akka.stream.ActorMaterializer;
 import akka.stream.IOResult;
-import akka.stream.Materializer;
 // #imports
 import akka.stream.alpakka.ftp.FtpSettings;
 import akka.stream.alpakka.ftp.javadsl.Ftp;
@@ -28,7 +26,6 @@ import java.util.stream.Collectors;
 public class Main {
 
     final ActorSystem actorSystem = ActorSystem.create();
-    final Materializer materializer = ActorMaterializer.create(actorSystem);
 
     private void run() throws UnknownHostException {
         final FileSystemMock ftpFileSystem = new FileSystemMock();
@@ -56,14 +53,15 @@ public class Main {
                                 parallelism,
                                 ftpFile -> { // (3)
                                     final Path localPath = targetDir.resolve("." + ftpFile.path());
+                                    localPath.getParent().toFile().mkdirs();
                                     final CompletionStage<IOResult> fetchFile =
                                             Ftp.fromPath(ftpFile.path(), ftpSettings)
-                                                    .runWith(FileIO.toPath(localPath), materializer); // (4)
+                                                    .runWith(FileIO.toPath(localPath), actorSystem); // (4)
                                     return fetchFile.thenApply(
                                             ioResult -> // (5)
                                                     Pair.create(ftpFile.path(), ioResult));
                                 }) // : (String, IOResult)
-                        .runWith(Sink.seq(), materializer); // (6)
+                        .runWith(Sink.seq(), actorSystem); // (6)
         // #sample
 
         fetchedFiles
@@ -81,7 +79,7 @@ public class Main {
                                     System.out.println("errors occured: " + res.toString());
                                 }
                             } else {
-                                System.out.println("the stream failed");
+                                System.out.println("the stream failed: " + ex);
                             }
 
                             actorSystem.terminate();
