@@ -7,9 +7,10 @@
         </encoder>
     </appender>
 
-    <logger name="org.apache" level="WARN"/>
+    <logger name="akka" level="INFO"/>
+    <logger name="akka.kafka" level="INFO"/>
     <logger name="kafka" level="WARN"/>
-    <logger name="akka" level="DEBUG"/>
+    <logger name="org.apache" level="WARN"/>
     <logger name="org.apache.kafka.common.utils.AppInfoParser" level="ERROR"/>
     <logger name="org.apache.kafka.clients.NetworkClient" level="ERROR"/>
     <logger name="org.I0Itec.zkclient" level="WARN"/>

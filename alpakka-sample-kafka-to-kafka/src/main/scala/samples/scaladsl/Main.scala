@@ -128,9 +128,7 @@ object Main extends App with Helper {
   val copyingFinished = control.drainAndShutdown()
   Await.result(copyingFinished, 10.seconds)
 
-  // TODO why does this not complete?
-//    Await.result(received.shutdown(), 10.seconds)
-  received.shutdown()
+  Await.result(received.shutdown(), 2.seconds)
 
   stopContainers()
   actorSystem.terminate()
