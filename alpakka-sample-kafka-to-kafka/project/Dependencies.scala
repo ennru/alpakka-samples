@@ -1,3 +1,4 @@
+import com.lightbend.cinnamon.sbt.Cinnamon
 import sbt._
 
 object Dependencies {
@@ -16,6 +17,8 @@ object Dependencies {
     // Tracing
     "org.apache.kafka" % "kafka-clients" % "2.3.1",
     //"io.opentracing" % "opentracing-api" % "0.33.0",
+    Cinnamon.library.cinnamonOpenTracing,
+    Cinnamon.library.cinnamonOpenTracingJaeger,
     "io.jaegertracing" % "jaeger-client" % "0.32.0",
     "io.opentracing.contrib" % "opentracing-kafka-client" % "0.0.20",
     // for JSON in Scala
